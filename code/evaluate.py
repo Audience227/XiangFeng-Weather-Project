@@ -92,3 +92,10 @@ save_path = f"D:/Weather_Project/output/对比图_{base_name}_vs_{physics_name}_
 
 plt.savefig(save_path, dpi=150)
 print(f"📸 智能保存成功！图片路径为: {save_path}")
+
+# ========== 记录 evaluate.py 的本次运行时间 ==========
+import os, time
+output_dir = "D:/Weather_Project/output"
+with open(os.path.join(output_dir, "time_normal.txt"), "w") as f:
+    f.write(str(time.time()))
+print("📝 evaluate.py 运行时间已记录")

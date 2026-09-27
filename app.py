@@ -32,16 +32,68 @@ else:
         st.warning("未找到本地示例数据，请确认路径。")
 
 st.subheader("2️⃣ 模型预测结果对比图")
-st.markdown("下图展示了纯ConvLSTM模型与物理约束ConvLSTM模型在测试集上的预测效果对比：")
+st.markdown("下图展示了纯ConvLSTM模型与物理约束ConvLSTM模型的预测效果对比：")
 
-# 直接指定英文文件名，避免云端乱码
-import os
-img_path = "output/comparison.png"
-if os.path.exists(img_path):
-    st.image(img_path, caption="三条线对比图（普通天气）", use_container_width=True)
-else:
-    st.warning("⚠️ 未找到对比图，请确认 output 文件夹下有 comparison.png 文件。")
+import os, time
 
+output_dir = "output"
+time_normal_file = os.path.join(output_dir, "time_normal.txt")
+time_extreme_file = os.path.join(output_dir, "time_extreme.txt")
+
+t1 = None
+t2 = None
+
+if os.path.exists(time_normal_file):
+    with open(time_normal_file, "r") as f:
+        t1 = float(f.read().strip())
+if os.path.exists(time_extreme_file):
+    with open(time_extreme_file, "r") as f:
+        t2 = float(f.read().strip())
+
+# 时间窗口：90秒（1.5分钟）。若两个脚本运行时间相差在此之内，视为同一次实验，都展示。
+THRESHOLD = 90
+
+show_normal = False
+show_extreme = False
+
+if t1 and t2:
+    if abs(t1 - t2) < THRESHOLD:
+        # 两个脚本几乎同时运行过，都展示
+        show_normal = True
+        show_extreme = True
+    else:
+        # 只展示最近运行过的那个
+        if t1 > t2:
+            show_normal = True
+        else:
+            show_extreme = True
+elif t1:
+    show_normal = True
+elif t2:
+    show_extreme = True
+
+# 展示普通对比图
+if show_normal:
+    normal_txt = os.path.join(output_dir, "latest_normal.txt")
+    if os.path.exists(normal_txt):
+        with open(normal_txt, "r", encoding="utf-8") as f:
+            name = f.read().strip()
+        img_path = os.path.join(output_dir, name)
+        if os.path.exists(img_path):
+            st.image(img_path, caption="整体模型预测对比图", use_container_width=True)
+
+# 展示极端天气图
+if show_extreme:
+    extreme_txt = os.path.join(output_dir, "latest_extreme.txt")
+    if os.path.exists(extreme_txt):
+        with open(extreme_txt, "r", encoding="utf-8") as f:
+            name = f.read().strip()
+        img_path = os.path.join(output_dir, name)
+        if os.path.exists(img_path):
+            st.image(img_path, caption="极端天气高亮对比图", use_container_width=True)
+
+if not show_normal and not show_extreme:
+    st.warning("⚠️ 未找到对比图，请先运行 evaluate.py 或 evaluate2.py 生成图片。")
 st.subheader("3️⃣ 极端天气表现（答辩重点）")
 st.markdown("""
 - **普通天气**：纯模型精度略高（MSE 0.0413）

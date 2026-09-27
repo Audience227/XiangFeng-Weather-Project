@@ -114,3 +114,10 @@ save_path = f"D:/Weather_Project/output/极端天气对比_{base_name}_vs_{physi
 
 plt.savefig(save_path, dpi=150)
 print(f"📸 带极端天气高亮的对比图保存成功！路径: {save_path}")
+
+# ========== 记录 evaluate2.py 的本次运行时间 ==========
+import os, time
+output_dir = "D:/Weather_Project/output"
+with open(os.path.join(output_dir, "time_extreme.txt"), "w") as f:
+    f.write(str(time.time()))
+print("📝 evaluate2.py 运行时间已记录")
