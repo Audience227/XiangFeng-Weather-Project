@@ -30,70 +30,68 @@ else:
         st.dataframe(df_demo.head(10))
     except:
         st.warning("未找到本地示例数据，请确认路径。")
+import streamlit as st
+import numpy as np
+import torch
+import torch.nn as nn
+import matplotlib
+matplotlib.use('Agg')  # 关键：无GUI模式，省内存
+import matplotlib.pyplot as plt
+from convlstm import ConvLSTM
+import os
 
-st.subheader("2️⃣ 模型预测结果对比图")
-st.markdown("下图展示了纯ConvLSTM模型与物理约束ConvLSTM模型的预测效果对比：")
+st.subheader("2️⃣ 点击运行模型推理")
+st.markdown("点击下方按钮，运行物理约束模型进行推理并展示结果：")
 
-import os, time
+# ========== 模型定义 ==========
+class TempConvLSTM(nn.Module):
+    def __init__(self, input_dim=6, hidden_dim=16):
+        super().__init__()
+        self.convlstm = ConvLSTM(input_dim=input_dim, hidden_dim=hidden_dim,
+                                  kernel_size=(3, 3), num_layers=1,
+                                  batch_first=True, bias=True, return_all_layers=False)
+        self.fc = nn.Linear(hidden_dim, 1)
+    def forward(self, x):
+        x = x.reshape(x.size(0), x.size(1), x.size(2), 1, 1)
+        out, _ = self.convlstm(x)
+        out = out[0][:, -1, :, :, :].mean(dim=[2, 3])
+        return self.fc(out)
 
-output_dir = "output"
-time_normal_file = os.path.join(output_dir, "time_normal.txt")
-time_extreme_file = os.path.join(output_dir, "time_extreme.txt")
+# ========== 推理函数 ==========
+def run_inference():
+    with st.spinner("正在加载数据与模型..."):
+        X = np.load("data/X.npy")
+        y = np.load("data/y.npy")
+        split = int(len(X) * 0.8)
+        X_test = X[split:]
+        y_test = y[split:]
+        X_test_t = torch.FloatTensor(X_test)
+        
+        model = TempConvLSTM()
+        model.load_state_dict(torch.load("output/convlstm_physics_model.pth", map_location='cpu'))
+        model.eval()
+        
+        with torch.no_grad():
+            y_pred = model(X_test_t).numpy()
+        
+        mse = np.mean((y_test - y_pred)**2)
+        st.success(f"推理完成！测试集 MSE = {mse:.4f}")
+        
+        # 绘图
+        n = 200
+        fig, ax = plt.subplots(figsize=(12, 4))
+        ax.plot(y_test[:n], label='真实气温', color='blue', linewidth=1.5)
+        ax.plot(y_pred[:n], label='物理约束预测', color='green', linestyle='-.', linewidth=1.5)
+        ax.set_title('ConvLSTM Prediction')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+        plt.close(fig)
 
-t1 = None
-t2 = None
+# ========== 按钮 ==========
+if st.button("▶️ 运行物理约束模型推理"):
+    run_inference()
 
-if os.path.exists(time_normal_file):
-    with open(time_normal_file, "r") as f:
-        t1 = float(f.read().strip())
-if os.path.exists(time_extreme_file):
-    with open(time_extreme_file, "r") as f:
-        t2 = float(f.read().strip())
-
-# 时间窗口：90秒（1.5分钟）。若两个脚本运行时间相差在此之内，视为同一次实验，都展示。
-THRESHOLD = 90
-
-show_normal = False
-show_extreme = False
-
-if t1 and t2:
-    if abs(t1 - t2) < THRESHOLD:
-        # 两个脚本几乎同时运行过，都展示
-        show_normal = True
-        show_extreme = True
-    else:
-        # 只展示最近运行过的那个
-        if t1 > t2:
-            show_normal = True
-        else:
-            show_extreme = True
-elif t1:
-    show_normal = True
-elif t2:
-    show_extreme = True
-
-# 展示普通对比图
-if show_normal:
-    normal_txt = os.path.join(output_dir, "latest_normal.txt")
-    if os.path.exists(normal_txt):
-        with open(normal_txt, "r", encoding="utf-8") as f:
-            name = f.read().strip()
-        img_path = os.path.join(output_dir, name)
-        if os.path.exists(img_path):
-            st.image(img_path, caption="整体模型预测对比图", use_container_width=True)
-
-# 展示极端天气图
-if show_extreme:
-    extreme_txt = os.path.join(output_dir, "latest_extreme.txt")
-    if os.path.exists(extreme_txt):
-        with open(extreme_txt, "r", encoding="utf-8") as f:
-            name = f.read().strip()
-        img_path = os.path.join(output_dir, name)
-        if os.path.exists(img_path):
-            st.image(img_path, caption="极端天气高亮对比图", use_container_width=True)
-
-if not show_normal and not show_extreme:
-    st.warning("⚠️ 未找到对比图，请先运行 evaluate.py 或 evaluate2.py 生成图片。")
 st.subheader("3️⃣ 极端天气表现（答辩重点）")
 st.markdown("""
 - **普通天气**：纯模型精度略高（MSE 0.0413）
