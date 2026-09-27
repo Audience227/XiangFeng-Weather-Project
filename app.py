@@ -34,15 +34,13 @@ else:
 st.subheader("2️⃣ 模型预测结果对比图")
 st.markdown("下图展示了纯ConvLSTM模型与物理约束ConvLSTM模型在测试集上的预测效果对比：")
 
-# 找到最新的对比图
-output_dir = "output"
-png_files = [f for f in os.listdir(output_dir) if f.startswith('三条线对比') and f.endswith('.png')]
-
-if png_files:
-    latest_png = max(png_files, key=lambda x: os.path.getctime(os.path.join(output_dir, x)))
-    st.image(os.path.join(output_dir, latest_png), caption=f"最近一次预测对比：{latest_png}", use_container_width=True)
+# 直接指定英文文件名，避免云端乱码
+import os
+img_path = "output/comparison.png"
+if os.path.exists(img_path):
+    st.image(img_path, caption="三条线对比图（普通天气）", use_container_width=True)
 else:
-    st.warning("⚠️ 未找到对比图，请先在命令行运行 python evaluate.py 生成图片。")
+    st.warning("⚠️ 未找到对比图，请确认 output 文件夹下有 comparison.png 文件。")
 
 st.subheader("3️⃣ 极端天气表现（答辩重点）")
 st.markdown("""
