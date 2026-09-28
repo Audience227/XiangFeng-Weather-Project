@@ -36,6 +36,8 @@ features = ['T2M', 'T2M_MAX', 'T2M_MIN', 'RH2M', 'WS2M', 'PS']
 scaler = StandardScaler()
 df[features] = scaler.fit_transform(df[features])
 
+np.save("data/scaler_mean.npy", scaler.mean_)
+np.save("data/scaler_scale.npy", scaler.scale_)
 # 6. 构建滑动窗口（输入过去7天，预测未来1天气温）
 def create_sequences(data, input_len=7, pred_len=1):
     X, y = [], []

@@ -47,6 +47,7 @@ criterion = nn.MSELoss()
 
 # 4. 开始训练
 print("开始训练！由于是CPU，可能需要几分钟，请耐心等待...")
+best_test_mse = float('inf')
 for epoch in range(100): # 先跑30轮看看效果
     model.train()
     total_loss = 0
@@ -58,13 +59,17 @@ for epoch in range(100): # 先跑30轮看看效果
         optimizer.step()
         total_loss += loss.item()
 
-    if (epoch + 1) % 5 == 0: # 每5轮打印一次
+    if (epoch + 1) % 5 == 0:
         model.eval()
         with torch.no_grad():
             test_pred = model(X_test_t)
             test_loss = criterion(test_pred, y_test_t).item()
         print(f"Epoch {epoch+1:3d} | 训练Loss: {total_loss/len(train_loader):.4f} | 测试MSE: {test_loss:.4f}")
+        
+        # ✅ 自动保存最佳权重
+        if test_loss < best_test_mse:
+            best_test_mse = test_loss
+            torch.save(model.state_dict(), "D:/Weather_Project/output/best_convlstm_model.pth")
+            print(f"🌟 发现新最佳！MSE={test_loss:.4f}，已保存 best_convlstm_model.pth")
 
-# 5. 保存模型
-torch.save(model.state_dict(), "D:/Weather_Project/output/convlstm_model.pth")
 print("训练完成！模型已保存至 D:/Weather_Project/output/convlstm_model.pth")
