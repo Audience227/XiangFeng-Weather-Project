@@ -110,15 +110,13 @@ y_test = y[split:]
 X_test_t = torch.FloatTensor(X_test)
 
 def draw_and_show(show_extreme=False):
-    """加载两个模型，画三条线，在内存中渲染"""
-    # 加载基础模型
+    """加载模型，画三条线，在内存中渲染，并根据模式计算对应MSE"""
     base_model = TempConvLSTM()
-    base_model.load_state_dict(torch.load("output/convlstm_model.pth", map_location='cpu'))
+    base_model.load_state_dict(torch.load("output/best_convlstm_model.pth", map_location='cpu'))
     base_model.eval()
     
-    # 加载物理约束模型
     physics_model = TempConvLSTM()
-    physics_model.load_state_dict(torch.load("output/convlstm_physics_model.pth", map_location='cpu'))
+    physics_model.load_state_dict(torch.load("output/best_convlstm_physics_model.pth", map_location='cpu'))
     physics_model.eval()
     
     with torch.no_grad():
@@ -132,9 +130,10 @@ def draw_and_show(show_extreme=False):
     ax.plot(y_pred_physics[:n], label='物理约束ConvLSTM预测', color='green', linestyle='-.', linewidth=1.5)
     
     if show_extreme:
-        extreme_idx = np.where(y_test[:n] > 1.0)[0]
-        if len(extreme_idx) > 0:
-            ax.scatter(extreme_idx, y_test[extreme_idx], color='orange', s=40, zorder=5, label='极端高温样本')
+        # 找到前200个样本里的极端高温样本，画橙色点
+        plot_extreme_idx = [i for i in np.where(y_test > 1.0)[0] if i < n]
+        if len(plot_extreme_idx) > 0:
+            ax.scatter(plot_extreme_idx, y_test[plot_extreme_idx], color='orange', s=40, zorder=5, label='极端高温样本')
             
     ax.set_title('ConvLSTM Temperature Prediction')
     ax.set_xlabel('Test Sample Index')
@@ -144,9 +143,19 @@ def draw_and_show(show_extreme=False):
     st.pyplot(fig)
     plt.close(fig)
     
-    mse_base = np.mean((y_test - y_pred_base)**2)
-    mse_physics = np.mean((y_test - y_pred_physics)**2)
-    st.success(f"✅ 推理完成！纯数据模型 MSE = {mse_base:.4f} | 物理约束模型 MSE = {mse_physics:.4f}")
+    # ✅ 核心修复：根据是否展示极端天气，计算不同的MSE
+    if show_extreme:
+        extreme_idx = np.where(y_test > 1.0)[0]
+        if len(extreme_idx) > 0:
+            mse_base = np.mean((y_test[extreme_idx] - y_pred_base[extreme_idx])**2)
+            mse_physics = np.mean((y_test[extreme_idx] - y_pred_physics[extreme_idx])**2)
+            st.success(f"✅ **极端天气推理完成！** 极端高温样本数：{len(extreme_idx)} | 纯数据模型 MSE = **{mse_base:.4f}** | 物理约束模型 MSE = **{mse_physics:.4f}**")
+        else:
+            st.warning("测试集中未发现极端高温样本。")
+    else:
+        mse_base = np.mean((y_test - y_pred_base)**2)
+        mse_physics = np.mean((y_test - y_pred_physics)**2)
+        st.success(f"✅ **整体推理完成！** 纯数据模型 MSE = **{mse_base:.4f}** | 物理约束模型 MSE = **{mse_physics:.4f}**")
 
 col1, col2 = st.columns(2)
 with col1:
