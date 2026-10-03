@@ -16,12 +16,67 @@ from convlstm import ConvLSTM
 plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
-st.set_page_config(page_title="相风 - 南京微气候预测", layout="wide")
-st.title("🌬️ 相风 - 南京微气候气温预测平台")
+st.set_page_config(page_title="相风 XiangFeng | 南京微气候预测平台", layout="wide", page_icon="🌬️")
 
+# ==================== 商务视觉层 ====================
+CUSTOM_CSS = """
+<style>
+  html, body, [class*="css"] { font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif; }
+  /* 主视觉横幅 */
+  .hero { background: linear-gradient(135deg, #0F2A43 0%, #1E5799 55%, #2E86DE 100%);
+          padding: 2.4rem 2.6rem 2.1rem; border-radius: 18px; color: #FFFFFF;
+          box-shadow: 0 6px 24px rgba(15, 42, 67, .28); }
+  .hero h1 { font-size: 2.7rem; font-weight: 800; margin: 0; letter-spacing: 3px; }
+  .hero .en { font-size: .95rem; letter-spacing: 2.5px; opacity: .75; text-transform: uppercase; margin-top: .3rem; }
+  .hero .sub { font-size: 1.08rem; opacity: .93; margin-top: .9rem; line-height: 1.6; }
+  .badge { display: inline-block; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.28);
+           padding: .28rem 1rem; border-radius: 999px; font-size: .82rem; margin: 1rem .5rem 0 0; }
+  /* 章节标题 */
+  .sec { display: flex; align-items: center; gap: .75rem; margin: 1.8rem 0 .5rem; }
+  .sec .num { background: linear-gradient(135deg, #1F4E79, #2E86DE); color: #fff; font-weight: 700;
+              border-radius: 9px; padding: .18rem .68rem; font-size: 1.02rem; letter-spacing: 1px; }
+  .sec .txt { font-size: 1.42rem; font-weight: 800; color: #16283C; letter-spacing: 1px; }
+  .sec .line { flex: 1; height: 1px; background: linear-gradient(90deg, #C9D6E4, transparent); }
+  /* 按钮与卡片 */
+  .stButton > button { background: linear-gradient(135deg, #1F4E79, #2E86DE); color: #fff; border: none;
+                       border-radius: 10px; padding: .52rem 1.5rem; font-weight: 700; letter-spacing: 1px;
+                       box-shadow: 0 3px 10px rgba(31, 78, 121, .28); transition: all .2s; }
+  .stButton > button:hover { filter: brightness(1.12); transform: translateY(-1px); }
+  [data-testid="stMetric"] { background: #F7F9FC; border: 1px solid #E4EAF2; border-radius: 14px;
+                             padding: 1.05rem 1.2rem; box-shadow: 0 2px 6px rgba(22, 40, 60, .05); }
+  [data-testid="stMetricValue"] { color: #1F4E79; font-weight: 800; }
+  [data-testid="stMetricLabel"] { color: #5A6B7E; font-weight: 600; }
+  /* 侧边栏 */
+  [data-testid="stSidebar"] { background: linear-gradient(180deg, #0F2A43, #16395C); }
+  [data-testid="stSidebar"] * { color: #DCE6F2 !important; }
+  [data-testid="stSidebar"] hr { border-color: rgba(255,255,255,.18); }
+  .side-tag { background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.22);
+              border-radius: 9px; padding: .5rem .8rem; font-size: .85rem; margin-bottom: .6rem; line-height: 1.5; }
+  /* 数据框与页脚 */
+  [data-testid="stDataFrame"] { border-radius: 12px; }
+  .footer { text-align: center; color: #7A8A9C; font-size: .85rem; padding: 1.2rem 0 .4rem;
+            border-top: 1px solid #E4EAF2; margin-top: 2rem; }
+</style>
+"""
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+# ==================== 侧边栏：项目档案 ====================
+with st.sidebar:
+    st.markdown("### 🌬️ 相风 XiangFeng")
+    st.markdown('<div class="side-tag"><b>数据来源</b><br>NASA POWER 官方公开数据集<br>南京 32.20°N, 118.70°E<br>2015–2025 · 逐日 · 4011 条</div>', unsafe_allow_html=True)
+    st.markdown('<div class="side-tag"><b>模型架构</b><br>ConvLSTM (hidden=16)<br>输入：过去 7 天 × 6 要素<br>输出：第 8 天 6 项气象指标</div>', unsafe_allow_html=True)
+    st.markdown('<div class="side-tag"><b>对比实验</b><br>纯数据 vs 物理约束<br>MSE 口径：无单位（标准化空间）<br>高温日判定：气象局标准</div>', unsafe_allow_html=True)
+    st.markdown('<div class="side-tag"><b>团队</b><br>南信大数统院 "数学+AI" 方向<br>挑战杯 · 科技作品</div>', unsafe_allow_html=True)
+
+# ==================== 主视觉 ====================
 st.markdown("""
-> **项目介绍**：本项目基于ConvLSTM及物理约束，对南京地区历史气象数据（2015-2025）进行学习，实现未来短时气温预测与可视化。
-""")
+<div class="hero">
+  <h1>相 风</h1>
+  <div class="en">XiangFeng · Microclimate Forecasting Platform</div>
+  <div class="sub">基于 ConvLSTM 与物理约束的南京微气候预测可视化平台 —— 用现代技术回答古人千年之问</div>
+  <span class="badge">🛰️ NASA POWER 数据源</span><span class="badge">📅 2015–2025 十年观测</span><span class="badge">🧠 ConvLSTM + 物理约束</span><span class="badge">🌡️ 6 项气象指标预测</span>
+</div>
+""", unsafe_allow_html=True)
 
 # ==================== 模型定义 ====================
 class TempConvLSTM(nn.Module):
@@ -107,8 +162,24 @@ def get_predictions(_X_test):
 
 y_pred_base, y_pred_physics, pred_base_n, pred_physics_n = get_predictions(X_test)
 
+# ==================== 核心指标总览 ====================
+heat_idx_all = np.where(y_test_tmax >= EXTREME_TMAX_C)[0]
+rmse_all_base = float(np.sqrt(np.mean((y_test_temp - y_pred_base)**2)))
+rmse_all_phys = float(np.sqrt(np.mean((y_test_temp - y_pred_physics)**2)))
+mse_heat_base = float(np.mean((y_test[heat_idx_all, 0] - pred_base_n[heat_idx_all])**2))
+mse_heat_phys = float(np.mean((y_test[heat_idx_all, 0] - pred_physics_n[heat_idx_all])**2))
+rmse_heat_base = float(np.sqrt(np.mean((y_test_temp[heat_idx_all] - y_pred_base[heat_idx_all])**2)))
+rmse_heat_phys = float(np.sqrt(np.mean((y_test_temp[heat_idx_all] - y_pred_physics[heat_idx_all])**2)))
+drop_pct = (1 - mse_heat_phys / mse_heat_base) * 100
+
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("整体预测精度 RMSE", f"{rmse_all_phys:.2f} ℃", f"纯数据模型 {rmse_all_base:.2f} ℃", delta_color="off")
+m2.metric("高温日 RMSE", f"{rmse_heat_phys:.2f} ℃", f"纯数据模型 {rmse_heat_base:.2f} ℃", delta_color="off")
+m3.metric("高温日误差下降", f"-{drop_pct:.1f}%", "物理约束的关键贡献", delta_color="off")
+m4.metric("测试集高温日", f"{len(heat_idx_all)} 天", "日最高气温 ≥ 35℃", delta_color="off")
+
 # ==================== 第一部分：数据预览 ====================
-st.subheader("1️⃣ 数据预览")
+st.markdown('<div class="sec"><span class="num">01</span><span class="txt">数据预览</span><span class="line"></span></div>', unsafe_allow_html=True)
 try:
     df_demo = pd.read_csv("data/nanjing.csv", skiprows=17)
     df_show = df_demo.head(10).copy()
@@ -119,7 +190,7 @@ except Exception as e:
     st.warning(f"未找到示例数据：{e}")
 
 # ==================== 第二部分：在线预测 ====================
-st.subheader("2️⃣ 在线预测")
+st.markdown('<div class="sec"><span class="num">02</span><span class="txt">在线预测</span><span class="line"></span></div>', unsafe_allow_html=True)
 st.markdown("输入过去 **7天** 的气象数据，模型将预测 **第8天** 的6项气象指标。")
 
 default_data = pd.DataFrame({
@@ -157,7 +228,7 @@ if st.button("🔮 开始预测", type="primary"):
         st.error(f"预测失败：{e}")
 
 # ==================== 第三部分：对比图（真实℃单位） ====================
-st.subheader("3️⃣ 模型预测结果对比图")
+st.markdown('<div class="sec"><span class="num">03</span><span class="txt">模型预测结果对比</span><span class="line"></span></div>', unsafe_allow_html=True)
 st.markdown("点击下方按钮，切换查看对比图（坐标单位：℃ 真实值；所用权重与文稿实验一致）：")
 
 def draw_and_show(show_extreme=False):
@@ -227,7 +298,7 @@ elif st.session_state.view_mode == "extreme":
     draw_and_show(show_extreme=True)
 
 # ==================== 第四部分：极端天气表现 ====================
-st.subheader("4️⃣ 极端天气表现（答辩重点）")
+st.markdown('<div class="sec"><span class="num">04</span><span class="txt">极端天气表现</span><span class="line"></span></div>', unsafe_allow_html=True)
 st.markdown(f"""
 - **高温日判定标准**：采用中国气象局标准——**日最高气温 ≥ {EXTREME_TMAX_C:.0f}℃** 记为高温日；
   测试集（约 2024–2025 年，803 天）中共 **38 个高温日**（全十年 4011 天共 177 个）。
@@ -238,5 +309,7 @@ st.markdown(f"""
   体现物理约束带来的鲁棒性提升。具体数值点击上方按钮实时查看。
 """)
 
-st.divider()
-st.caption(f"© 2026 南信大数统院挑战杯项目组 - 相风 | 更新：{datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S')}（北京时间）")
+st.markdown(f"""
+<div class="footer">© 2026 南京信息工程大学 数统院挑战杯项目组 · 相风 XiangFeng<br>
+数据来源：NASA POWER | 更新时间：{datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M')}（北京时间）</div>
+""", unsafe_allow_html=True)
