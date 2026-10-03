@@ -229,29 +229,30 @@ if st.button("🔮 开始预测", type="primary"):
 
 # ==================== 第三部分：对比图（真实℃单位） ====================
 st.markdown('<div class="sec"><span class="num">03</span><span class="txt">模型预测结果对比</span><span class="line"></span></div>', unsafe_allow_html=True)
-st.markdown("点击下方按钮，切换查看对比图（坐标单位：℃ 真实值；所用权重与文稿实验一致）：")
+st.markdown("点击按钮在线生成：**整体图**展示前 200 个测试日；**极端图**聚焦全测试集 803 天，橙色点为气象局标准高温日（日最高气温≥35℃）：")
 
 def draw_and_show(show_extreme=False):
-    n = 200
-    fig, ax = plt.subplots(figsize=(14, 5))
-    ax.plot(y_test_temp[:n], label='Ground Truth', color='blue', linewidth=2, alpha=0.7)
-    ax.plot(y_pred_base[:n], label='Pure ConvLSTM', color='red', linestyle='--', linewidth=1.5)
-    ax.plot(y_pred_physics[:n], label='Physics-constrained ConvLSTM', color='green', linestyle='-.', linewidth=1.5)
+    n = len(y_test_temp) if show_extreme else 200
+    with st.spinner('⚡ 正在运行模型推理并生成图像...'):
+        fig, ax = plt.subplots(figsize=(14, 5.5))
+        ax.plot(y_test_temp[:n], label='Ground Truth', color='blue', linewidth=1.8 if show_extreme else 2, alpha=0.75)
+        ax.plot(y_pred_base[:n], label='Pure ConvLSTM', color='red', linestyle='--', linewidth=1.4)
+        ax.plot(y_pred_physics[:n], label='Physics-constrained ConvLSTM', color='green', linestyle='-.', linewidth=1.4)
 
-    if show_extreme:
-        heat_idx_all = np.where(y_test_tmax >= EXTREME_TMAX_C)[0]
-        plot_heat_idx = [i for i in heat_idx_all if i < n]
-        if len(plot_heat_idx) > 0:
-            ax.scatter(plot_heat_idx, y_test_temp[plot_heat_idx], color='orange',
-                       s=40, zorder=5, label='CMA heat days (T2M_MAX ≥ 35°C)')
+        if show_extreme:
+            plot_heat_idx = heat_idx_all[heat_idx_all < n]
+            if len(plot_heat_idx) > 0:
+                ax.scatter(plot_heat_idx, y_test_temp[plot_heat_idx], color='orange',
+                           s=42, zorder=5, label='CMA heat days (T2M_MAX ≥ 35°C)')
 
-    ax.set_title('Daily Mean Temperature Prediction (Nanjing)')
-    ax.set_xlabel('Test Sample Index (Day)')
-    ax.set_ylabel('Temperature (℃)')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    st.pyplot(fig)
-    plt.close(fig)
+        ax.set_title('Heat-Day Focus — Full Test Series (803 days)' if show_extreme
+                     else 'Overall Comparison — First 200 Test Days')
+        ax.set_xlabel('Test Sample Index (Day)')
+        ax.set_ylabel('Temperature (℃)')
+        ax.legend(loc='upper right', fontsize=9)
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+        plt.close(fig)
 
     # MSE 统一采用无单位（标准化）口径，与答辩材料一致；RMSE 换算为实际温度作直觉参考
     if show_extreme:
