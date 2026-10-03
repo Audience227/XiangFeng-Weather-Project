@@ -22,7 +22,7 @@ y = np.load("D:/Weather_Project/data/y.npy")
 
 split = int(len(X) * 0.8)
 X_test = X[split:]
-y_test = y[split:]
+y_test = y[split: , 0]
 X_test_t = torch.FloatTensor(X_test)
 
 # ================== 3. 定义模型结构 ==================
@@ -57,8 +57,8 @@ except:
 
 # ================== 5. 预测与计算 ==================
 with torch.no_grad():
-    y_pred_base = model_base(X_test_t).numpy()
-    y_pred_physics = model_physics(X_test_t).numpy()
+    y_pred_base = model_base(X_test_t).numpy()[ : , 0]
+    y_pred_physics = model_physics(X_test_t).numpy()[ : , 0]
 
 mse_base = np.mean((y_test - y_pred_base)**2)
 mse_physics = np.mean((y_test - y_pred_physics)**2)

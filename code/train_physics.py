@@ -10,6 +10,8 @@ from convlstm import ConvLSTM
 X = np.load("D:/Weather_Project/data/X.npy")
 y = np.load("D:/Weather_Project/data/y.npy")
 
+assert X.shape[1:] == (7, 6) and y.shape[1:] == (6,), "数据形状不对"
+
 split = int(len(X) * 0.8)
 X_train, X_test = X[:split], X[split:]
 y_train, y_test = y[:split], y[split:]
@@ -19,43 +21,39 @@ y_train_t = torch.FloatTensor(y_train)
 X_test_t = torch.FloatTensor(X_test)
 y_test_t = torch.FloatTensor(y_test)
 
-train_loader = DataLoader(TensorDataset(X_train_t, y_train_t), batch_size=8, shuffle=True)
+train_loader = DataLoader(TensorDataset(X_train_t, y_train_t), batch_size=16, shuffle=True)
 
 class TempConvLSTM(nn.Module):
-    def __init__(self, input_dim=6, hidden_dim=16):
+    def __init__(self, input_dim=6, hidden_dim=16, output_dim=6):
         super().__init__()
-        self.convlstm = ConvLSTM(input_dim=input_dim, hidden_dim=hidden_dim, kernel_size=(3, 3), num_layers=1, batch_first=True, bias=True, return_all_layers=False)
-        self.fc = nn.Linear(hidden_dim, 1)
+        self.convlstm = ConvLSTM(input_dim=input_dim, hidden_dim=hidden_dim,
+                                  kernel_size=(3, 3), num_layers=1,
+                                  batch_first=True, bias=True, return_all_layers=False)
+        self.fc = nn.Linear(hidden_dim, output_dim)
     def forward(self, x):
         x = x.reshape(x.size(0), x.size(1), x.size(2), 1, 1)
         out, _ = self.convlstm(x)
         out = out[0][:, -1, :, :, :].mean(dim=[2, 3])
         return self.fc(out)
 
-#核心：加入物理约束的损失函数
 class PhysicsLoss(nn.Module):
-    def __init__(self, lambda_physics=0.1):
+    def __init__(self, lambda_physics=1.0):
         super().__init__()
-        self.mse = nn.MSELoss()
+        self.mse = nn.MSELoss(reduction='none')
         self.lambda_physics = lambda_physics
-
+        self.weights = torch.FloatTensor([3.0, 2.0, 2.0, 1.0, 1.0, 1.0])
     def forward(self, pred, target):
-        #数据损失
-        l_data = self.mse(pred, target)
-        #物理约束（时间平滑性）：惩罚预测气温在时间上的突变
-        #由于我们的输出只有一个时间步，这里通过观察特征维度的相关性来施加约束
-        #即：温度变化应与湿度、气压、风速存在物理相关性，不能让预测值与这些物理量无关
-        l_physics = torch.abs(pred - target).mean()  #简化版时间平滑约束，防止预测过拟合
+        l_data = (self.mse(pred, target) * self.weights).mean()
+        l_physics = (pred[:, 1:] - pred[:, :-1]).abs().mean()
         return l_data + self.lambda_physics * l_physics
 
 model = TempConvLSTM()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-#使用带物理约束的损失函数
 criterion = PhysicsLoss(lambda_physics=1.0)
 
-print("开始物理约束训练...")
 best_test_mse = float('inf')
+
+print("开始物理约束训练...")
 for epoch in range(100):
     model.train()
     total_loss = 0
@@ -71,12 +69,12 @@ for epoch in range(100):
         model.eval()
         with torch.no_grad():
             test_pred = model(X_test_t)
-            test_loss = criterion.mse(test_pred, y_test_t).item()
-        print(f"Epoch {epoch+1:3d} | 物理Loss: {total_loss/len(train_loader):.4f} | 测试MSE: {test_loss:.4f}")
+            test_mse_temp = nn.MSELoss()(test_pred[:, 0], y_test_t[:, 0]).item()
+        print(f"Epoch {epoch+1:3d} | 物理Loss: {total_loss/len(train_loader):.4f} | 气温MSE: {test_mse_temp:.4f}")
         
-        # ✅ 自动保存最佳权重
-        if test_loss < best_test_mse:
-            best_test_mse = test_loss
+        if test_mse_temp < best_test_mse:
+            best_test_mse = test_mse_temp
             torch.save(model.state_dict(), "D:/Weather_Project/output/best_convlstm_physics_model.pth")
-            print(f"🌟 发现新最佳！MSE={test_loss:.4f}，已保存 best_convlstm_physics_model.pth")
-print("物理约束训练完成！")
+            print(f"🌟 新最佳气温MSE={test_mse_temp:.4f}，已保存")
+
+print(f"物理约束训练完成！最佳气温MSE={best_test_mse:.4f}")

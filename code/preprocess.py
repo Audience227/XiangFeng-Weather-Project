@@ -43,15 +43,17 @@ def create_sequences(data, input_len=7, pred_len=1):
     X, y = [], []
     for i in range(len(data) - input_len - pred_len + 1):
         X.append(data[i : i + input_len])
-        y.append(data[i + input_len : i + input_len + pred_len, 0])
+        y.append(data[i + input_len : i + input_len + pred_len, :].squeeze(0))
     return np.array(X), np.array(y)
 
 arr = df[features].values
 X, y = create_sequences(arr, input_len=7, pred_len=1)
 
-print("输入形状:", X.shape, "输出形状:", y.shape)
+# 形状校验
+assert X.shape[1:] == (7, 6), f"X形状错误: {X.shape}"
+assert y.shape[1:] == (6,), f"y形状错误: {y.shape}"
 
-# 7. 保存文件
+print("输入形状:", X.shape, "输出形状:", y.shape)
 np.save("D:/Weather_Project/data/X.npy", X)
 np.save("D:/Weather_Project/data/y.npy", y)
-print("数据预处理完成！生成了 X.npy 和 y.npy")
+print("✅ 数据预处理完成！")
