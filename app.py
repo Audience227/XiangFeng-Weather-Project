@@ -66,7 +66,6 @@ with st.sidebar:
     st.markdown('<div class="side-tag"><b>数据来源</b><br>NASA POWER 官方公开数据集<br>南京 32.20°N, 118.70°E<br>2015–2025 · 逐日 · 4011 条</div>', unsafe_allow_html=True)
     st.markdown('<div class="side-tag"><b>模型架构</b><br>ConvLSTM (hidden=16)<br>输入：过去 7 天 × 6 要素<br>输出：第 8 天 6 项气象指标</div>', unsafe_allow_html=True)
     st.markdown('<div class="side-tag"><b>对比实验</b><br>纯数据 vs 物理约束<br>MSE 口径：无单位（标准化空间）<br>高温日判定：气象局标准</div>', unsafe_allow_html=True)
-    st.markdown('<div class="side-tag"><b>团队</b><br>南信大数统院 "数学+AI" 方向<br>挑战杯 · 科技作品</div>', unsafe_allow_html=True)
 
 # ==================== 主视觉 ====================
 st.markdown("""
